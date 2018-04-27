@@ -2,41 +2,49 @@
 #define min_drug_similarity 0.5
 #define min_target_similarity 0.5
 #define alpha 2.26
-
+#define fdrugID "NR_Drugs_IDs.txt"
+#define ftargetID "NR_Targets_IDs.txt"
+#define fdtInterraction "NR_DrugTarget_interactions.txt"
+#define fdrugSimilarity "NR_Drugs_Similarity.txt"
+#define ftargetSimilarity "NR_Targets_Similarity.txt"
 using namespace std;
 
 typedef pair<int, double> pid;
 typedef vector<vector<double> > vvd;
-
+typedef pair<pair<int,int>,double> ppd;
 vvd drugs, targets, interactions, result;
 vector<pid> g[100005];
 vector<int> visited;
+vector<ppd> lstpredicton;
+vector<string> targetsname,drugnames;
 int nDrugs, nTargets, nVertex;
-
+//get numberOfDrugs
 int numberOfDrugs() {
-    ifstream fi("NR_Drugs_IDs.txt");
+    ifstream fi(fdrugID);
     string s;
     getline(fi, s);
     int ret=0;
     while (!fi.eof()) {
         getline(fi, s);
         ret++;
+        drugnames.push_back(s);
     }
     return ret;
 }
-
+//get numberOfTargets
 int numberOfTargets() {
-    ifstream fi("NR_Targets_IDs.txt");
+    ifstream fi(ftargetID);
     string s;
     getline(fi, s);
     int ret=0;
     while (!fi.eof()) {
         getline(fi, s);
         ret++;
+        targetsname.push_back(s);
     }
     return ret;
 }
-
+// init all state and vector
 void init() {
     nDrugs = numberOfDrugs();
     nTargets = numberOfTargets();
@@ -45,41 +53,53 @@ void init() {
     targets.resize(nTargets, vector<double>(nTargets, 0));
     interactions.resize(nDrugs, vector<double>(nTargets, 0));
     result.resize(nDrugs, vector<double>(nTargets, 0));
+    dtinteractions.resize(nDrugs, vector<double>(nTargets,0));
     visited.resize(nVertex);
 }
-
+//read DrugsSimilarity
 void readDrugsSimilarity() {
-    
-    ifstream fi("NR_Drugs_Similarity.txt");
+
+    ifstream fi(fdrugSimilarity);
     for (size_t i = 0; i < nDrugs; i++) {
         for (size_t j = 0; j < nDrugs; j++) {
             fi >> drugs[i][j];
-            
+
         }
-        
+
     }
 }
-
+//read TargetsSimilarity
 void readTargetsSimilarity() {
-    
-    ifstream fi("NR_Targets_Similarity.txt");
+
+    ifstream fi(ftargetSimilarity);
     for (size_t i = 0; i < nTargets; i++) {
         for (size_t j = 0; j < nTargets; j++) {
             fi >> targets[i][j];
         }
     }
 }
-
+//read DrugTargetInteractions
 void readDrugTargetInteractions() {
-    
-    ifstream fi("NR_DrugTarget_interactions.txt");
+
+    ifstream fi(fdtInterraction);
     for (size_t i = 0; i < nDrugs; i++) {
         for (size_t j = 0; j < nTargets; j++) {
             fi >> interactions[i][j];
         }
     }
 }
+void findnewInteraction(vvd _result,vvd _interaction)
+{
+    lstpredicton.resize(nDrugs+nTargets);
+    for(size_t i=0; i<_interaction.size(); i++)
+        for(size_t j=0; i<_interaction[i].size(); j++)
+        {
+            if(i!=j&&_interaction[i][j]!=_result[i][j] && _interaction[i][j]!=1)
+                lstpredicton.push_back(make_pair(make_pair(i,j),_result[i][j]));
+        }
 
+}
+//write to matrix output
 void write_result(vvd _vvd) {
     ofstream fo("output.txt");
     for (size_t i = 0; i < _vvd.size(); i++) {
@@ -89,7 +109,7 @@ void write_result(vvd _vvd) {
         fo << endl;
     }
 }
-
+// make linkList graph
 void buildGraph() {
     for (size_t i = 0; i < nDrugs; i++) {
         for (size_t j = 0; j < nDrugs; j++) {
@@ -98,7 +118,7 @@ void buildGraph() {
             }
         }
     }
-    
+
     for (size_t i = nDrugs; i < nDrugs+nTargets; i++) {
         for (size_t j = nDrugs; j < nDrugs+nTargets; j++) {
             if (i != j && targets[i-nDrugs][j-nDrugs] > min_target_similarity) {
@@ -106,7 +126,7 @@ void buildGraph() {
             }
         }
     }
-    
+
     for (size_t i = 0; i < nDrugs; i++) {
         for (size_t j = 0; j < nTargets; j++) {
             if (interactions[i][j] > 0) {
@@ -116,7 +136,7 @@ void buildGraph() {
         }
     }
 }
-
+// traverse graph DFS
 double score=0.0;
 void traverse(int u, int des, int cnt, double sc) {
     if (cnt > 3){
@@ -136,11 +156,31 @@ void traverse(int u, int des, int cnt, double sc) {
         }
     }
 }
+//write to CVS format
+void write_CVS(vvd _vvd)
+{
+    size_t i;
+    ofstream fo("result.csv");
+    fo << "\t,";
+    for(i=0; i<nTargets-1; i++)
+        fo << targetsname[i]<<",";
+    fo << targetsname[i];
+    fo << endl;
+    //write line
+     for (size_t i = 0; i < _vvd.size(); i++) {
+        fo << drugnames[i]<<",";
+        for (size_t j = 0; j < _vvd[i].size() ; j++) {
+            fo << setprecision(18) << fixed<< _vvd[i][j] << ',';
+        }
+        fo << endl;
+    }
+    fo.close();
+}
 
 void mainTask() {
-    for (int i = 0; i < nDrugs; i++) {
-        for (int j = nDrugs; j < nDrugs + nTargets; j++) {
-            for (int k = 0; k < nVertex; k++) {
+    for (size_t i = 0; i < nDrugs; i++) {
+        for (size_t j = nDrugs; j < nDrugs + nTargets; j++) {
+            for (size_t k = 0; k < nVertex; k++) {
                 visited[k] = 0;
             }
             visited[i] = 1;
@@ -159,5 +199,6 @@ int main() {
     buildGraph();
     mainTask();
     write_result(result);
+    write_CVS(result);
     return 0;
 }
