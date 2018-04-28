@@ -53,7 +53,7 @@ void init() {
     targets.resize(nTargets, vector<double>(nTargets, 0));
     interactions.resize(nDrugs, vector<double>(nTargets, 0));
     result.resize(nDrugs, vector<double>(nTargets, 0));
-    dtinteractions.resize(nDrugs, vector<double>(nTargets,0));
+//    dtinteractions.resize(nDrugs, vector<double>(nTargets,0));
     visited.resize(nVertex);
 }
 //read DrugsSimilarity
