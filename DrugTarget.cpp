@@ -14,7 +14,7 @@ typedef vector<vector<double> > vvd;
 typedef pair<pair<int,int>,double> ppd;
 vvd drugs, targets, interactions, result;
 vector<pid> g[100005];
-vector<int> visited;
+vector<unsigned int> visited,outcome;
 vector<ppd> lstpredicton;
 vector<string> targetsname,drugnames;
 int nDrugs, nTargets, nVertex;
@@ -53,7 +53,6 @@ void init() {
     targets.resize(nTargets, vector<double>(nTargets, 0));
     interactions.resize(nDrugs, vector<double>(nTargets, 0));
     result.resize(nDrugs, vector<double>(nTargets, 0));
-//    dtinteractions.resize(nDrugs, vector<double>(nTargets,0));
     visited.resize(nVertex);
 }
 //read DrugsSimilarity
@@ -90,13 +89,19 @@ void readDrugTargetInteractions() {
 }
 void findnewInteraction(vvd _result,vvd _interaction)
 {
+
     lstpredicton.resize(nDrugs+nTargets);
+    outcome.resize(nDrugs+nTargets);
+    for(size_t i=0;i<nDrugs+nTargets; i++)
+        outcome[i]=0;
     for(size_t i=0; i<_interaction.size(); i++)
-        for(size_t j=0; i<_interaction[i].size(); j++)
+    {
+        for(size_t j=0; j<_interaction[i].size(); j++)
         {
-            if(i!=j&&_interaction[i][j]!=_result[i][j] && _interaction[i][j]!=1)
+
                 lstpredicton.push_back(make_pair(make_pair(i,j),_result[i][j]));
         }
+    }
 
 }
 //write to matrix output
@@ -200,5 +205,6 @@ int main() {
     mainTask();
     write_result(result);
     write_CVS(result);
+    findnewInteraction(result,interactions);
     return 0;
 }
